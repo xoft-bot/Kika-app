@@ -46,3 +46,7 @@ export function todayISO(): string {
 export function genId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
+
+export function monthKey(iso: string): string {
+  return iso.slice(0, 7);
+}
