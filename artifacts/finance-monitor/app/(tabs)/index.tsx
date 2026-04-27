@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Platform,
@@ -81,7 +82,12 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.bg }]}> 
-      <Header title="FinanceMonitor UG" subtitle="Track money, debt, SMS and reports" rightIcon="bell" />
+      <Header
+        title="FinanceMonitor UG"
+        subtitle="Track money, debt, SMS and reports"
+        rightIcon="settings"
+        onPressRight={() => router.push("/settings")}
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
