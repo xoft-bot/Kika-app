@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>FinanceMonitor UG</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#050508;font-family:'Inter',sans-serif;min-height:100vh;display:flex;justify-content:center}
+:root{
+  --bg:#0a0a0f;--surface:#111827;--surface2:#0f172a;
+  --border:#1e293b;--primary:#60a5fa;--secondary:#a78bfa;
+  --success:#10b981;--danger:#ef4444;--warning:#f59e0b;
+  --text:#e2e8f0;--muted:#64748b;--sub:#94a3b8;
+  --mono:'JetBrains Mono',monospace;
+}
+.app{width:100%;max-width:430px;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.status-bar{background:#060610;padding:10px 20px 6px;display:flex;justify-content:space-between;align-items:center}
+.status-time{font-size:13px;font-weight:800;color:var(--text);font-family:var(--mono)}
+.notch{width:90px;height:20px;background:#111;border-radius:20px}
+.app-header{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.app-title{font-size:20px;font-weight:900;font-family:var(--mono);background:linear-gradient(90deg,#60a5fa,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.app-sub{font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px;text-transform:uppercase}
+.source-badges{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.sbadge{font-size:8px;padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:80px}
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,8px)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px;cursor:pointer;background:none;border:none;gap:2px}
+.tab-icon{font-size:20px}
+.tab-label{font-size:8px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding-bottom:2px}
+.section{padding:14px 14px 6px}
+.section-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;font-family:var(--mono)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
+.card-sm{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
+.row{display:flex;justify-content:space-between;align-items:center}
+.mono{font-family:var(--mono)}
+.badge{font-size:8px;padding:2px 7px;border-radius:4px;font-weight:800}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin:6px 0 3px}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+input,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;width:100%;font-family:'Inter',sans-serif;outline:none}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+input:focus,textarea:focus{border-color:var(--primary)}
+textarea{resize:vertical;min-height:90px}
+button{cursor:pointer;font-family:'Inter',sans-serif}
+.btn{border:none;border-radius:8px;padding:12px;font-weight:800;font-size:13px;letter-spacing:1px;width:100%;text-transform:uppercase}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.divider{height:1px;background:var(--border);margin:6px 0}
+.chip{font-size:9px;padding:3px 8px;border-radius:5px;font-weight:700}
+.modal-overlay{position:fixed;inset:0;background:#000000bb;z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:16px}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:10px 22px;border-radius:20px;font-size:12px;font-weight:800;z-index:300;letter-spacing:1px;white-space:nowrap}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+const SOURCES={
+  'MTN MoMo':{color:'#FFCC00',tc:'#1a1a1a',icon:'📱'},
+  'Airtel Money':{color:'#FF0000',tc:'#fff',icon:'📶'},
+  'Stanbic Bank':{color:'#003087',tc:'#fff',icon:'🏦'},
+  'DFCU Bank':{color:'#00843D',tc:'#fff',icon:'🏛️'},
+  'Housing Finance':{color:'#8B0000',tc:'#fff',icon:'🏠'},
+  'KCB Bank':{color:'#007A3D',tc:'#fff',icon:'🏦'},
+  'Pearl Bank':{color:'#4B0082',tc:'#fff',icon:'💎'},
+  'NCBA Bank':{color:'#E87722',tc:'#fff',icon:'🏦'},
+  'SACCO':{color:'#6B21A8',tc:'#fff',icon:'🤝'},
+  'Unknown':{color:'#334155',tc:'#fff',icon:'❓'},
+};
+
+const CATEGORIES={
+  'Employer Income':{icon:'💼',color:'#10b981'},
+  'Service Income':{icon:'🔧',color:'#06b6d4'},
+  'Gift':{icon:'🎁',color:'#a78bfa'},
+  'Loan Received':{icon:'💸',color:'#f59e0b'},
+  'Cash Withdrawal':{icon:'💵',color:'#6b7280'},
+  'Loan Repayment':{icon:'🔄',color:'#ef4444'},
+  'Utilities':{icon:'💡',color:'#3b82f6'},
+  'Transport':{icon:'🚗',color:'#8b5cf6'},
+  'Food & Delivery':{icon:'🍔',color:'#f97316'},
+  'Entertainment':{icon:'🎉',color:'#ec4899'},
+  'Girlfriend':{icon:'💕',color:'#ec4899'},
+  'Household':{icon:'🏠',color:'#06b6d4'},
+  'School Fees':{icon:'📚',color:'#14b8a6'},
+  'Savings':{icon:'🏦',color:'#10b981'},
+  'Investment Club':{icon:'📊',color:'#7c3aed'},
+  'Trading':{icon:'📈',color:'#0891b2'},
+  'Transfer':{icon:'↔️',color:'#94a3b8'},
+  'Data/Airtime':{icon:'📡',color:'#818cf8'},
+  'Other':{icon:'📋',color:'#64748b'},
+};
+
+const STORAGE_KEY='fmug_v3_data';
+
+function loadData(){
+  try{const r=localStorage.getItem(STORAGE_KEY);if(r)return JSON.parse(r);}catch(e){}
+  return{
+    transactions:[
+      // April 2026 - Latest
+      {id:'a1',source:'Airtel Money',type:'credit',amount:804654,party:'INTERSWITCH/IVAN (service)',category:'Service Income',date:'2026-04-22',balance:843854},
+      {id:'a2',source:'Airtel Money',type:'credit',amount:341389,party:'INTERSWITCH/IVAN (service)',category:'Service Income',date:'2026-04-11',balance:342160},
+      {id:'a3',source:'MTN MoMo',type:'credit',amount:200000,party:'INTERSWITCH/IVAN (service)',category:'Service Income',date:'2026-04-13',balance:200414},
+      {id:'a4',source:'Airtel Money',type:'debit',amount:50495,party:'JUMOWORLD (loan cleared)',category:'Loan Repayment',date:'2026-04-22'},
+      {id:'a5',source:'Airtel Money',type:'debit',amount:102007,party:'HFB Loans (cleared)',category:'Loan Repayment',date:'2026-04-22'},
+      {id:'a6',source:'Airtel Money',type:'debit',amount:83844,party:'KWASA KWASA (cleared)',category:'Loan Repayment',date:'2026-04-22'},
+      {id:'a7',source:'MTN MoMo',type:'credit',amount:502096,party:'PEGASUS TECHNOLOGIES',category:'Employer Income',date:'2026-03-28'},
+      {id:'a8',source:'MTN MoMo',type:'credit',amount:103373,party:'PEGASUS TECHNOLOGIES',category:'Employer Income',date:'2026-03-29'},
+      {id:'a9',source:'MTN MoMo',type:'debit',amount:37060,party:'PEARL BANK XTRA CASH (cleared)',category:'Loan Repayment',date:'2026-03-28'},
+      {id:'a10',source:'MTN MoMo',type:'credit',amount:500000,party:'NCBA BANK UGANDA (gift)',category:'Gift',date:'2026-04-07'},
+      {id:'a11',source:'MTN MoMo',type:'debit',amount:137000,party:'Airtel (Mimosa - nightlife)',category:'Entertainment',date:'2026-03-28'},
+      {id:'a12',source:'MTN MoMo',type:'debit',amount:72000,party:'Airtel (Lemon - nightlife)',category:'Entertainment',date:'2026-03-28'},
+      {id:'a13',source:'Airtel Money',type:'debit',amount:101000,party:'INGRID NAKIWALA',category:'Other',date:'2026-04-22'},
+      {id:'a14',source:'Airtel Money',type:'credit',amount:41000,party:'BELINA NABUWALA (gift)',category:'Gift',date:'2026-04-10'},
+      {id:'a15',source:'MTN MoMo',type:'debit',amount:47000,party:'COHEN NIMUSIIMA (food/household)',category:'Household',date:'2026-03-26'},
+      {id:'a16',source:'Airtel Money',type:'debit',amount:100000,party:'Data Bundle (monthly internet)',category:'Data/Airtime',date:'2026-04-09'},
+      {id:'a17',source:'MTN MoMo',type:'debit',amount:40000,party:'FARAS TECHNOLOGIES (transport)',category:'Transport',date:'2026-03-29'},
+      // March 2026
+      {id:'b1',source:'MTN MoMo',type:'credit',amount:479358,party:'PEGASUS/ROY (Phase 2)',category:'Service Income',date:'2026-02-28'},
+      {id:'b2',source:'MTN MoMo',type:'credit',amount:476192,party:'PEGASUS TECHNOLOGIES',category:'Employer Income',date:'2026-02-13'},
+      {id:'b3',source:'Airtel Money',type:'debit',amount:201050,party:'School Fees (CLEARED)',category:'School Fees',date:'2026-03-26'},
+      {id:'b4',source:'Airtel Money',type:'credit',amount:745466,party:'INTERSWITCH/IVAN (service)',category:'Service Income',date:'2026-03-26'},
+      {id:'b5',source:'MTN MoMo',type:'debit',amount:400000,party:'TIMOTHY (loan repayment)',category:'Loan Repayment',date:'2026-02-13'},
+      {id:'b6',source:'Airtel Money',type:'debit',amount:50000,party:'TRACY NAKANDI (girlfriend)',category:'Girlfriend',date:'2026-02-16'},
+      {id:'b7',source:'MTN MoMo',type:'debit',amount:200000,party:'NERIA NATUHWERA (loan cleared)',category:'Loan Repayment',date:'2026-03-29'},
+    ],
+    loans:[
+      {id:'timothy',name:'Timothy Loan',principal:2800000,paid:100000,rate:0,takenDate:'2026-01-01',dueDate:null,notes:'UGX 200,000/week — currently in arrears'},
+      {id:'pearl_mtn',name:'Pearl Bank (MTN)',principal:115000,paid:0,rate:9,takenDate:'2026-04-02',dueDate:'2026-05-02',notes:'New Pearl Bank loan via MTN'},
+      {id:'mokash',name:'MoKash Overdraft',principal:25000,paid:0,rate:0,takenDate:'2026-04-01',dueDate:null,notes:'Rolling auto-savings overdraft'},
+    ],
+    accounts:[
+      {id:'mtn',name:'MTN MoMo',source:'MTN MoMo',balance:153980,number:'0788177913'},
+      {id:'airtel',name:'Airtel Money',source:'Airtel Money',balance:506509,number:'0701276337'},
+    ],
+    receivables:[
+      {id:'roy',name:'Roy Mbahira (UK)',total:3069770,paid:2825967,currency:'£649',notes:'Phase 2 outstanding — agreed rate. Last payment ~£50 over 1 month ago. NEEDS FOLLOW UP.'},
+      {id:'winnie',name:'Winnie Namara',total:200000,paid:110000,notes:'Item sale — UGX 90,000 still outstanding'},
+    ],
+    royPayments:[
+      {date:'16/11/2025',amount:50,ugx:236500,phase:1},
+      {date:'28/11/2025',amount:50,ugx:237728,phase:1},
+      {date:'05/12/2025',amount:49,ugx:232837,phase:1},
+      {date:'11/12/2025',amount:50,ugx:236506,phase:1},
+      {date:'19/12/2025',amount:100,ugx:471811,phase:1},
+      {date:'22/12/2025',amount:254,ugx:1200000,phase:1},
+      {date:'31/12/2025',amount:86,ugx:406376,phase:1},
+      {date:'19/01/2026',amount:107,ugx:506571,phase:1},
+      {date:'19/01/2026',amount:16,ugx:75712,phase:2},
+      {date:'23/01/2026',amount:25,ugx:118947,phase:2},
+      {date:'26/01/2026',amount:101,ugx:480034,phase:2},
+      {date:'06/02/2026',amount:101,ugx:479839,phase:2},
+      {date:'13/02/2026',amount:101,ugx:476192,phase:2},
+      {date:'28/02/2026',amount:101,ugx:479358,phase:2},
+      {date:'~Mar 2026',amount:100,ugx:479385,phase:2},
+      {date:'~Mar 2026',amount:50,ugx:236500,phase:2},
+    ],
+  };
+}
+
+function saveData(d){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}catch(e){}}
+function fmt(n){return'UGX '+Math.round(n||0).toLocaleString()}
+function fmtDate(d){try{return new Date(d).toLocaleDateString('en-UG',{day:'2-digit',month:'short'})}catch{return''}}
+function daysUntil(d){if(!d)return null;return Math.ceil((new Date(d)-new Date())/86400000)}
+
+function parseSMS(text,sender=''){
+  const t=text.trim(),s=sender.toLowerCase();
+  function pa(str){return parseFloat((str||'').replace(/,/g,''))||0}
+  const patterns=[
+    {src:'MTN MoMo',keys:['mtn','momo'],rules:[
+      {re:/(?:received|from)\s+UGX\s*([\d,]+)\s+from\s+(.+?)(?:\.|on|at)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:m[2].trim()})},
+      {re:/UGX\s*([\d,]+)\s+(?:sent|paid|transferred)\s+to\s+(.+?)(?:\.|on|at)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:m[2].trim()})},
+      {re:/cash\s*out\s+(?:of\s+)?UGX\s*([\d,]+)\s+to\s+(.+?)(?:\.|on)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:m[2].trim(),category:'Cash Withdrawal'})},
+      {re:/UGX\s*([\d,]+)\s+from\s+(PEGASUS|VERTECH|SENDWAVE|TERRA|INTERSWITCH|NCBA)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:m[2],category:'Employer Income'})},
+      {re:/balance[:\s]+UGX\s*([\d,]+)/i,type:'balance',fn:m=>({balance:pa(m[1])})},
+    ]},
+    {src:'Airtel Money',keys:['airtel'],rules:[
+      {re:/(?:received|deposited)\s+UGX\s*([\d,]+)\s+from\s+(.+?)(?:\.|,|on)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:m[2].trim()})},
+      {re:/(?:sent|paid)\s+UGX\s*([\d,]+)\s+to\s+(.+?)(?:\.|,|on)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:m[2].trim()})},
+      {re:/loan\s+(?:of\s+)?UGX\s*([\d,]+)\s+(?:disbursed|approved)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:'Airtel Loan',category:'Loan Received'})},
+      {re:/withdrawn?\s+UGX\s*([\d,]+)\s+(?:from|by)\s+(.+?)(?:\.|,)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:m[2].trim(),category:'Cash Withdrawal'})},
+      {re:/balance[:\s]+UGX\s*([\d,]+)/i,type:'balance',fn:m=>({balance:pa(m[1])})},
+    ]},
+    {src:'DFCU Bank',keys:['dfcu'],rules:[
+      {re:/CR\s+UGX\s*([\d,]+)[,\s]+(.+?)(?:\.|Bal)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:m[2]?.trim()||'DFCU'})},
+      {re:/DR\s+UGX\s*([\d,]+)[,\s]+(.+?)(?:\.|Bal)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:m[2]?.trim()||'DFCU'})},
+    ]},
+    {src:'Stanbic Bank',keys:['stanbic'],rules:[
+      {re:/credited\s+(?:with\s+)?UGX\s*([\d,]+)(?:\s+from\s+(.+?))?(?:\.|,|Bal)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:m[2]?.trim()||'Stanbic'})},
+      {re:/debited\s+(?:with\s+)?UGX\s*([\d,]+)(?:\s+(?:to|for)\s+(.+?))?(?:\.|,|Bal)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:m[2]?.trim()||'Stanbic'})},
+    ]},
+    {src:'NCBA Bank',keys:['ncba'],rules:[
+      {re:/UGX\s*([\d,]+)\s+(?:credited|received|deposited)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:'NCBA Bank',category:'Gift'})},
+      {re:/UGX\s*([\d,]+)\s+(?:debited|paid)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:'NCBA Bank',category:'Loan Repayment'})},
+    ]},
+    {src:'Pearl Bank',keys:['pearl','housing','hfb'],rules:[
+      {re:/UGX\s*([\d,]+)\s+(?:credited|received)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:'Pearl Bank',category:'Loan Received'})},
+      {re:/UGX\s*([\d,]+)\s+(?:debited|paid)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:'Pearl Bank',category:'Loan Repayment'})},
+    ]},
+    {src:'KCB Bank',keys:['kcb'],rules:[
+      {re:/loan\s+(?:of\s+)?UGX\s*([\d,]+)\s+(?:disbursed|approved)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:'KCB Loan',category:'Loan Received'})},
+      {re:/UGX\s*([\d,]+)\s+(?:debited|paid)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:'KCB Bank',category:'Loan Repayment'})},
+    ]},
+    {src:'SACCO',keys:['sacco','savings','finca','pride'],rules:[
+      {re:/savings\s+(?:of\s+)?UGX\s*([\d,]+)/i,type:'credit',fn:m=>({amount:pa(m[1]),party:'SACCO',category:'Savings'})},
+      {re:/loan\s+repayment\s+(?:of\s+)?UGX\s*([\d,]+)/i,type:'debit',fn:m=>({amount:pa(m[1]),party:'SACCO',category:'Loan Repayment'})},
+    ]},
+  ];
+
+  function detectCat(party,type,base){
+    if(!party)return base||'Other';
+    const p=party.toLowerCase();
+    if(/pegasus|vertech|sendwave|terra/.test(p))return'Employer Income';
+    if(/interswitch|ivan/.test(p))return'Service Income';
+    if(/gift|ncba|belina|rajab/.test(p))return'Gift';
+    if(/timothy|loan|jumoworld|kwasa|wewole|neria|kcb|pearl|hfb|xtra/.test(p))return type==='credit'?'Loan Received':'Loan Repayment';
+    if(/irene|frank|derrick|amon|cryton|chap|aidah|rodgers|rashcom|sonia|eddie|angel|ezeemoney/.test(p))return'Cash Withdrawal';
+    if(/tracy|nakandi|plaisir|tales|lounge|ingrid/.test(p))return'Girlfriend';
+    if(/nwsc|water|uedcl|electricity/.test(p))return'Utilities';
+    if(/faras|vivo|fuel|bolt|uber|james muleyi/.test(p))return'Transport';
+    if(/cohen|household|shopwise|carrefour/.test(p))return'Household';
+    if(/school|fees|tuition/.test(p))return'School Fees';
+    if(/data|bundle|airtime/.test(p))return'Data/Airtime';
+    if(/glovo|mezo|restaurant|food/.test(p))return'Food & Delivery';
+    if(/savings|enclave|investment|mokash/.test(p))return'Savings';
+    if(/cinemax|cinema|entertainment|night|club|lemon|mimosa|mezo noir/.test(p))return'Entertainment';
+    if(/document bank|investment club/.test(p))return'Investment Club';
+    if(/yo uganda|trading/.test(p))return'Trading';
+    return base||'Transfer';
+  }
+
+  for(const parser of patterns){
+    const match=parser.keys.some(k=>s.includes(k)||t.toLowerCase().includes(k));
+    if(!match&&sender)continue;
+    for(const rule of parser.rules){
+      const m=t.match(rule.re);
+      if(m){
+        const ex=rule.fn(m);
+        if(!ex.amount&&rule.type!=='balance')continue;
+        const cat=detectCat(ex.party,rule.type,ex.category);
+        return{id:Date.now()+''+Math.random().toString(36).slice(2,6),source:parser.src,type:rule.type,amount:ex.amount||0,balance:ex.balance,party:ex.party||parser.src,category:cat,date:new Date().toISOString().split('T')[0],raw:t};
+      }
+    }
+  }
+  const fb=t.match(/UGX\s*([\d,]+)/i);
+  if(fb){
+    const amount=parseFloat(fb[1].replace(/,/g,''));
+    const isCr=/credit|received|CR/i.test(t);
+    const isDr=/debit|sent|paid|DR/i.test(t);
+    if((isCr||isDr)&&amount>0)return{id:Date.now()+''+Math.random().toString(36).slice(2,6),source:'Unknown',type:isCr?'credit':'debit',amount,party:sender||'Unknown',category:'Other',date:new Date().toISOString().split('T')[0],raw:t};
+  }
+  return null;
+}
+
+const TABS=[
+  {id:'dashboard',icon:'📊',label:'Dashboard'},
+  {id:'transactions',icon:'📋',label:'Transactions'},
+  {id:'scanner',icon:'📩',label:'Scanner'},
+  {id:'loans',icon:'💰',label:'Loans'},
+  {id:'roy',icon:'🇬🇧',label:'Roy'},
+];
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({data}){
+  const {transactions,accounts,receivables}=data;
+  const totalIn=transactions.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0);
+  const totalOut=transactions.filter(t=>t.type==='debit').reduce((s,t)=>s+t.amount,0);
+  const net=totalIn-totalOut;
+  const totalBal=accounts.reduce((s,a)=>s+(a.balance||0),0);
+  const cats={};
+  transactions.forEach(t=>{
+    if(!cats[t.category])cats[t.category]={credit:0,debit:0};
+    cats[t.category][t.type]+=t.amount;
+  });
+  const catList=Object.entries(cats).sort((a,b)=>b[1].debit-a[1].debit);
+  const maxCat=Math.max(...catList.map(([,v])=>v.debit),1);
+
+  // Ivan total
+  const ivanTotal=transactions.filter(t=>t.party?.toLowerCase().includes('ivan')).reduce((s,t)=>s+t.amount,0);
+
+  return(
+    <div className="screen">
+      {/* Balances */}
+      <div className="section">
+        <div className="section-title">Current Balances — {new Date().toLocaleDateString('en-UG',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        <div style={{display:'flex',gap:8,marginBottom:8}}>
+          {accounts.map(a=>(
+            <div key={a.id} className="card-sm" style={{flex:1,textAlign:'center',borderColor:(a.balance||0)>50000?'#10b98133':'#ef444433'}}>
+              <div style={{fontSize:8,color:'var(--muted)',letterSpacing:1,marginBottom:4}}>{a.name.split(' ')[0]}</div>
+              <div style={{fontSize:7,color:'var(--muted)',marginBottom:2}}>{a.number}</div>
+              <div className="mono" style={{fontSize:11,fontWeight:800,color:(a.balance||0)>50000?'var(--success)':'var(--danger)'}}>{fmt(a.balance)}</div>
+            </div>
+          ))}
+          <div className="card-sm" style={{flex:1,textAlign:'center',borderColor:'#60a5fa33'}}>
+            <div style={{fontSize:8,color:'var(--muted)',letterSpacing:1,marginBottom:4}}>TOTAL</div>
+            <div className="mono" style={{fontSize:11,fontWeight:800,color:'var(--primary)'}}>{fmt(totalBal)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ivan highlight */}
+      <div className="section">
+        <div className="section-title">Ivan — Service Income (Apr 2026)</div>
+        <div className="card" style={{borderColor:'#06b6d433',background:'#0a1f2a'}}>
+          <div className="row">
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Interswitch East Africa</div>
+              <div style={{fontSize:9,color:'var(--sub)',marginTop:2}}>3 payments — 11-Apr, 13-Apr, 22-Apr</div>
+            </div>
+            <div className="mono" style={{fontSize:16,fontWeight:900,color:'#06b6d4'}}>{fmt(ivanTotal)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="section">
+        <div className="section-title">Summary • {transactions.length} Transactions</div>
+        <div style={{display:'flex',gap:8,marginBottom:10}}>
+          {[['Money In',totalIn,'var(--success)'],['Money Out',totalOut,'var(--danger)']].map(([l,v,c])=>(
+            <div key={l} className="card" style={{flex:1,textAlign:'center',borderColor:c+'44'}}>
+              <div style={{fontSize:8,color:'var(--muted)',letterSpacing:1.5,marginBottom:6}}>{l.toUpperCase()}</div>
+              <div className="mono" style={{fontSize:12,fontWeight:800,color:c}}>{fmt(v)}</div>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{textAlign:'center',borderColor:net>=0?'#10b98133':'#ef444433'}}>
+          <div style={{fontSize:9,color:'var(--muted)',letterSpacing:2,marginBottom:6}}>NET POSITION</div>
+          <div className="mono" style={{fontSize:24,fontWeight:900,color:net>=0?'var(--success)':'var(--danger)'}}>{net>=0?'+':''}{fmt(net)}</div>
+        </div>
+      </div>
+
+      {/* Receivables */}
+      <div className="section">
+        <div className="section-title">Receivables — Owed to You</div>
+        {receivables.map(r=>{
+          const outstanding=r.total-(r.paid||0);
+          const pct=Math.min(((r.paid||0)/r.total)*100,100);
+          const isRoy=r.id==='roy';
+          return(
+            <div key={r.id} className="card-sm" style={{borderColor:isRoy?'#f59e0b33':'#10b98133'}}>
+              <div className="row" style={{marginBottom:6}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{r.name}</div>
+                  <div style={{fontSize:9,color:'var(--sub)',marginTop:2}}>{r.notes}</div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  {r.currency&&<div className="mono" style={{fontSize:14,fontWeight:800,color:'var(--warning)'}}>{r.currency}</div>}
+                  <div className="mono" style={{fontSize:11,fontWeight:800,color:isRoy?'var(--warning)':'var(--success)'}}>{fmt(outstanding)}</div>
+                </div>
+              </div>
+              <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`,background:isRoy?'var(--warning)':'var(--success)'}}/></div>
+              <div style={{fontSize:9,color:'var(--muted)'}}>{pct.toFixed(1)}% received</div>
+              {isRoy&&<div style={{marginTop:8,background:'#1a0f00',padding:'6px 8px',borderRadius:6,fontSize:9,color:'var(--warning)',fontWeight:700}}>⚠️ No payment received in over 1 month — visit needed</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Categories */}
+      <div className="section">
+        <div className="section-title">Spending by Category</div>
+        {catList.map(([cat,vals])=>{
+          const info=CATEGORIES[cat]||CATEGORIES['Other'];
+          return(
+            <div key={cat} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{fontSize:20}}>{info.icon}</span>
+              <div style={{flex:1}}>
+                <div className="row" style={{marginBottom:4}}>
+                  <span style={{fontSize:11,fontWeight:600,color:'var(--text)'}}>{cat}</span>
+                  <span className="mono" style={{fontSize:11,fontWeight:800,color:vals.debit>0?'var(--danger)':'var(--success)'}}>{vals.debit>0?'-':'+' }{fmt(vals.debit||vals.credit)}</span>
+                </div>
+                <div className="progress-bar"><div className="progress-fill" style={{width:`${Math.min((vals.debit/maxCat)*100,100)}%`,background:info.color}}/></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{height:20}}/>
+    </div>
+  );
+}
+
+// ── TRANSACTIONS ──────────────────────────────────────────────────────────────
+function Transactions({data}){
+  const [filter,setFilter]=useState('all');
+  const [search,setSearch]=useState('');
+  const filtered=data.transactions.filter(t=>{
+    const ms=!search||[t.party,t.category,t.source].some(x=>x?.toLowerCase().includes(search.toLowerCase()));
+    const mf=filter==='all'||t.type===filter;
+    return ms&&mf;
+  });
+  return(
+    <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <div style={{padding:'10px 12px',background:'var(--surface)',borderBottom:'1px solid var(--border)',position:'sticky',top:0,zIndex:10}}>
+        <input placeholder="🔍 Search party, category, source..." value={search} onChange={e=>setSearch(e.target.value)} style={{marginBottom:8}}/>
+        <div style={{display:'flex',gap:6}}>
+          {[['all','All'],['credit','📥 In'],['debit','📤 Out']].map(([f,l])=>(
+            <button key={f} onClick={()=>setFilter(f)} style={{padding:'6px 14px',borderRadius:6,border:'none',fontWeight:800,fontSize:11,cursor:'pointer',background:filter===f?'#60a5fa22':'var(--surface2)',color:filter===f?'var(--primary)':'var(--muted)'}}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{padding:'0 12px',flex:1,overflowY:'auto'}}>
+        {filtered.length===0&&<div style={{textAlign:'center',padding:40,color:'var(--muted)',fontSize:13}}>No transactions found</div>}
+        {filtered.map(tx=>{
+          const src=SOURCES[tx.source]||SOURCES['Unknown'];
+          const cat=CATEGORIES[tx.category]||CATEGORIES['Other'];
+          return(
+            <div key={tx.id} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{fontSize:20}}>{src.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:600,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tx.party}</div>
+                <div style={{display:'flex',gap:4,marginTop:3,flexWrap:'wrap'}}>
+                  <span className="badge" style={{background:src.color+'22',color:src.color}}>{tx.source?.split(' ')[0]}</span>
+                  <span className="badge" style={{background:cat.color+'22',color:cat.color}}>{cat.icon} {tx.category}</span>
+                </div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div className="mono" style={{fontSize:13,fontWeight:800,color:tx.type==='credit'?'var(--success)':'var(--danger)'}}>{tx.type==='credit'?'+':'-'}{fmt(tx.amount)}</div>
+                <div style={{fontSize:9,color:'var(--muted)',marginTop:2}}>{fmtDate(tx.date)}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── SCANNER ───────────────────────────────────────────────────────────────────
+const SAMPLES=[
+  {sender:'MTN MoMo',text:'You have received UGX 502,096 from PEGASUS TECHNOLOGIES LIMITED on 28/03/2026. Your balance is UGX 408,822.'},
+  {sender:'Airtel Money',text:'You have received UGX 804,654 from INTERSWITCH EAST AFRICA on 22/04/2026. Balance UGX 843,854.'},
+  {sender:'MTN MoMo',text:'UGX 37,060 has been sent to PEARL BANK UGANDA LIMITED on 28/03/2026. Balance UGX 335,732.'},
+  {sender:'Airtel Money',text:'Loan of UGX 35,687 disbursed to your account. Balance: UGX 53,350.'},
+  {sender:'DFCU Bank',text:'DR UGX 100,000 Loan repayment. Bal UGX 117,948.'},
+];
+
+function Scanner({onAdd,showToast}){
+  const [sms,setSms]=useState('');
+  const [sender,setSender]=useState('');
+  const [parsed,setParsed]=useState(null);
+  const [editCat,setEditCat]=useState(false);
+  const [saved,setSaved]=useState(false);
+
+  function parse(){
+    const r=parseSMS(sms,sender);
+    setParsed(r);setSaved(false);
+  }
+  function save(){
+    if(!parsed)return;
+    onAdd(parsed);showToast('Transaction Added!');
+    setSms('');setSender('');setParsed(null);setSaved(false);
+  }
+
+  return(
+    <div className="screen">
+      <div className="section">
+        <div className="section-title">Paste SMS Alert</div>
+        <div style={{fontSize:9,color:'var(--muted)',marginBottom:6}}>Quick test samples:</div>
+        <div style={{display:'flex',gap:6,marginBottom:14,overflowX:'auto',paddingBottom:4}}>
+          {SAMPLES.map((s,i)=>(
+            <button key={i} onClick={()=>{setSms(s.text);setSender(s.sender);setParsed(null);}} style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--sub)',borderRadius:6,padding:'6px 10px',fontSize:10,cursor:'pointer',whiteSpace:'nowrap',fontWeight:600}}>{s.sender.split(' ')[0]}</button>
+          ))}
+        </div>
+        <div style={{fontSize:9,color:'var(--muted)',marginBottom:4}}>Sender</div>
+        <input placeholder="MTN MoMo, Airtel Money, DFCU Bank, NCBA Bank, Pearl Bank..." value={sender} onChange={e=>setSender(e.target.value)} style={{marginBottom:10}}/>
+        <div style={{fontSize:9,color:'var(--muted)',marginBottom:4}}>SMS Message</div>
+        <textarea placeholder="Paste your transaction SMS here..." value={sms} onChange={e=>setSms(e.target.value)} style={{marginBottom:10}}/>
+        <button className="btn btn-primary" onClick={parse} style={{marginBottom:parsed?14:0}}>🔍 Parse SMS</button>
+      </div>
+
+      {parsed&&(
+        <div className="section">
+          <div className="section-title" style={{color:'var(--success)'}}>✓ Detected — {parsed.source}</div>
+          <div className="card" style={{borderColor:'#10b98133'}}>
+            {[
+              ['Type',<span style={{color:parsed.type==='credit'?'var(--success)':'var(--danger)',fontWeight:800}}>{parsed.type.toUpperCase()}</span>],
+              ['Amount',<span className="mono" style={{color:parsed.type==='credit'?'var(--success)':'var(--danger)',fontSize:16,fontWeight:900}}>{parsed.type==='credit'?'+':'-'}{fmt(parsed.amount)}</span>],
+              ['Party',parsed.party],
+              parsed.balance&&['Balance',fmt(parsed.balance)],
+            ].filter(Boolean).map(([k,v])=>(
+              <div key={k} className="row" style={{padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
+                <span style={{fontSize:10,color:'var(--muted)'}}>{k}</span>
+                <span style={{fontSize:11,color:'var(--text)',fontWeight:600}}>{v}</span>
+              </div>
+            ))}
+            <div className="row" style={{padding:'7px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'}} onClick={()=>setEditCat(!editCat)}>
+              <span style={{fontSize:10,color:'var(--muted)'}}>Category</span>
+              <span style={{fontSize:11,color:'var(--primary)',fontWeight:600}}>{(CATEGORIES[parsed.category]||CATEGORIES['Other']).icon} {parsed.category} ✏️</span>
+            </div>
+            {editCat&&(
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,padding:'10px 0'}}>
+                {Object.entries(CATEGORIES).map(([cat,info])=>(
+                  <button key={cat} onClick={()=>{setParsed(p=>({...p,category:cat}));setEditCat(false);}} style={{background:'var(--surface2)',border:'1px solid var(--border)',color:'var(--text)',borderRadius:6,padding:'5px 10px',fontSize:10,cursor:'pointer'}}>{info.icon} {cat}</button>
+                ))}
+              </div>
+            )}
+            <button className="btn" onClick={save} style={{marginTop:14,background:saved?'var(--success)':'#1d4ed8',color:'#fff'}}>{saved?'✓ SAVED!':'+ Add to Tracker'}</button>
+          </div>
+        </div>
+      )}
+
+      {sms&&!parsed&&(
+        <div className="section">
+          <div className="card" style={{borderColor:'#f59e0b33',textAlign:'center'}}>
+            <div style={{fontSize:13,color:'var(--warning)',fontWeight:700,marginBottom:6}}>⚠️ Could not parse</div>
+            <div style={{fontSize:11,color:'var(--muted)'}}>Try adding the sender name, or this format may not be supported yet.</div>
+          </div>
+        </div>
+      )}
+
+      <div className="section">
+        <div className="section-title">Supported Institutions</div>
+        {Object.entries(SOURCES).filter(([k])=>k!=='Unknown').map(([name,src])=>(
+          <div key={name} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+            <span style={{fontSize:16}}>{src.icon}</span>
+            <span style={{flex:1,fontSize:12,color:'var(--sub)'}}>{name}</span>
+            <span className="badge" style={{background:src.color+'22',color:src.color}}>ACTIVE</span>
+          </div>
+        ))}
+      </div>
+      <div style={{height:20}}/>
+    </div>
+  );
+}
+
+// ── LOANS ─────────────────────────────────────────────────────────────────────
+function Loans({data,onUpdate}){
+  const [showAdd,setShowAdd]=useState(false);
+  const [showPay,setShowPay]=useState(null);
+  const [payAmt,setPayAmt]=useState('');
+  const [form,setForm]=useState({name:'',principal:'',rate:'9',takenDate:'',dueDate:'',notes:''});
+
+  const total=data.loans.reduce((s,l)=>s+Math.max(0,l.principal-(l.paid||0)),0);
+
+  function addLoan(){
+    if(!form.name||!form.principal)return;
+    onUpdate('addLoan',{...form,id:Date.now()+'',principal:parseFloat(form.principal.replace(/,/g,'')),paid:0,rate:parseFloat(form.rate||0)});
+    setShowAdd(false);
+    setForm({name:'',principal:'',rate:'9',takenDate:'',dueDate:'',notes:''});
+  }
+
+  function recordPayment(){
+    const amt=parseFloat(payAmt.replace(/,/g,''));
+    if(!amt||amt<=0)return;
+    onUpdate('payLoan',{id:showPay.id,amount:amt});
+    setShowPay(null);setPayAmt('');
+  }
+
+  return(
+    <div className="screen">
+      <div style={{background:'var(--surface)',padding:20,textAlign:'center',borderBottom:'1px solid var(--border)'}}>
+        <div style={{fontSize:9,color:'var(--muted)',letterSpacing:2}}>TOTAL OUTSTANDING</div>
+        <div className="mono" style={{fontSize:26,fontWeight:900,color:'var(--danger)',margin:'6px 0'}}>{fmt(total)}</div>
+        <div style={{fontSize:10,color:'var(--muted)'}}>{data.loans.length} active loans</div>
+      </div>
+
+      <div className="section">
+        <div className="row" style={{marginBottom:12}}>
+          <div className="section-title" style={{marginBottom:0}}>Active Loans</div>
+          <button onClick={()=>setShowAdd(true)} style={{background:'#60a5fa22',color:'var(--primary)',border:'none',borderRadius:6,padding:'6px 12px',fontSize:10,fontWeight:800,cursor:'pointer',letterSpacing:1}}>+ ADD</button>
+        </div>
+
+        {data.loans.map(loan=>{
+          const remaining=loan.principal-(loan.paid||0);
+          const interest=remaining*((loan.rate||0)/100);
+          const total=remaining+interest;
+          const pct=Math.min(((loan.paid||0)/loan.principal)*100,100);
+          const days=daysUntil(loan.dueDate);
+          const col=days===null?'#94a3b8':days<=0?'#ef4444':days<=3?'#ef4444':days<=7?'#f59e0b':'#10b981';
+          return(
+            <div key={loan.id} className="card" style={{borderLeftWidth:3,borderLeftColor:col,marginBottom:10}}>
+              <div className="row" style={{marginBottom:10}}>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{loan.name}</span>
+                {days!==null&&<span className="chip" style={{background:col+'22',color:col}}>{days<0?`${Math.abs(days)}d OVERDUE`:days===0?'DUE TODAY':`${days}d left`}</span>}
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+                {[['Principal',fmt(loan.principal),'var(--text)'],['Paid',fmt(loan.paid||0),'var(--success)'],['Remaining',fmt(remaining),'var(--danger)']].map(([l,v,c])=>(
+                  <div key={l}>
+                    <div style={{fontSize:8,color:'var(--muted)',letterSpacing:1,marginBottom:2}}>{l}</div>
+                    <div className="mono" style={{fontSize:11,fontWeight:700,color:c}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {loan.rate>0&&<div style={{background:'#f59e0b11',padding:'6px 8px',borderRadius:6,fontSize:9,color:'var(--warning)',marginBottom:8,fontFamily:'monospace'}}>Interest @{loan.rate}%: {fmt(interest)} → Total: {fmt(total)}</div>}
+              <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`,background:col}}/></div>
+              <div style={{fontSize:8,color:'var(--muted)',marginBottom:8}}>{pct.toFixed(1)}% cleared{loan.dueDate?` • Due ${loan.dueDate}`:''}</div>
+              {loan.notes&&<div style={{fontSize:9,color:'var(--muted)',fontStyle:'italic',marginBottom:8}}>{loan.notes}</div>}
+              <button onClick={()=>setShowPay(loan)} style={{width:'100%',background:'#60a5fa22',color:'var(--primary)',border:'none',borderRadius:8,padding:10,fontWeight:800,fontSize:12,cursor:'pointer'}}>💳 Record Payment</button>
+            </div>
+          );
+        })}
+      </div>
+
+      {showAdd&&(
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowAdd(false)}>
+          <div className="modal">
+            <div className="modal-title">Add New Loan</div>
+            {[['name','Lender / Loan Name','e.g. Timothy'],['principal','Amount (UGX)','200000'],['rate','Interest Rate %','9'],['takenDate','Date Taken (YYYY-MM-DD)','2026-04-23'],['dueDate','Due Date (YYYY-MM-DD)','2026-05-23'],['notes','Notes','Optional']].map(([k,l,p])=>(
+              <div key={k} style={{marginBottom:10}}>
+                <div style={{fontSize:9,color:'var(--muted)',marginBottom:4,letterSpacing:1}}>{l.toUpperCase()}</div>
+                <input placeholder={p} value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))}/>
+              </div>
+            ))}
+            <div style={{display:'flex',gap:10,marginTop:4}}>
+              <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:12,background:'var(--border)',border:'none',borderRadius:8,color:'var(--text)',fontWeight:800,cursor:'pointer',fontSize:13}}>Cancel</button>
+              <button onClick={addLoan} className="btn btn-primary" style={{flex:1}}>Save Loan</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPay&&(
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowPay(null)}>
+          <div className="modal">
+            <div className="modal-title">Record Payment</div>
+            <div style={{fontSize:13,color:'var(--sub)',marginBottom:16}}>{showPay.name}</div>
+            <div style={{fontSize:9,color:'var(--muted)',marginBottom:6,letterSpacing:1}}>AMOUNT PAID (UGX)</div>
+            <input placeholder="e.g. 200000" value={payAmt} onChange={e=>setPayAmt(e.target.value)} style={{marginBottom:14}} autoFocus/>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setShowPay(null)} style={{flex:1,padding:12,background:'var(--border)',border:'none',borderRadius:8,color:'var(--text)',fontWeight:800,cursor:'pointer',fontSize:13}}>Cancel</button>
+              <button onClick={recordPayment} className="btn btn-success" style={{flex:1}}>Save Payment</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{height:20}}/>
+    </div>
+  );
+}
+
+// ── ROY TRACKER ───────────────────────────────────────────────────────────────
+function RoyTracker({data}){
+  const payments=data.royPayments||[];
+  const p1=payments.filter(p=>p.phase===1);
+  const p2=payments.filter(p=>p.phase===2);
+  const p1Total=p1.reduce((s,p)=>s+p.amount,0);
+  const p2Total=p2.reduce((s,p)=>s+p.amount,0);
+  const p1Agreed=730;const p2Agreed=1260;
+  const p2Outstanding=p2Agreed-p2Total;
+  const lastPayment=payments[payments.length-1];
+
+  return(
+    <div className="screen">
+      {/* Alert */}
+      <div style={{background:'#1a0f00',border:'1px solid #f59e0b44',borderRadius:12,margin:14,padding:14}}>
+        <div style={{fontSize:13,fontWeight:800,color:'var(--warning)',marginBottom:6}}>⚠️ Roy Follow-up Needed</div>
+        <div style={{fontSize:11,color:'var(--sub)',marginBottom:4}}>Last payment: <strong style={{color:'var(--text)'}}>~£50 in March 2026</strong></div>
+        <div style={{fontSize:11,color:'var(--sub)',marginBottom:4}}>That's over <strong style={{color:'var(--danger)'}}>1 month</strong> with no payment</div>
+        <div style={{fontSize:11,color:'var(--sub)'}}>Outstanding: <strong style={{color:'var(--warning)'}}>£{p2Outstanding} (~{fmt(p2Outstanding*4730)})</strong></div>
+        <div style={{marginTop:10,padding:'8px',background:'#0f0a00',borderRadius:8,fontSize:10,color:'var(--warning)'}}>
+          💬 Talking points for your visit:
+          <div style={{color:'var(--sub)',marginTop:4}}>• Phase 2 total agreed: £1,260</div>
+          <div style={{color:'var(--sub)'}}>• Paid so far: £{p2Total}</div>
+          <div style={{color:'var(--sub)'}}>• Outstanding: £{p2Outstanding} at agreed rate</div>
+          <div style={{color:'var(--sub)'}}>• Favour rate available: £{p2Agreed-595} if settling now</div>
+          <div style={{color:'var(--sub)'}}>• Units 17 & 18 submitted — awaiting tutor acceptance</div>
+          <div style={{color:'var(--sub)'}}>• Request lump sum settlement to close the account</div>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="section">
+        <div className="section-title">Roy Payment Summary</div>
+        <div style={{display:'flex',gap:8,marginBottom:12}}>
+          {[['Total Agreed','£1,990','var(--text)'],['Total Paid','£'+( p1Total+p2Total),'var(--success)'],['Outstanding','£'+p2Outstanding,'var(--warning)']].map(([l,v,c])=>(
+            <div key={l} className="card-sm" style={{flex:1,textAlign:'center'}}>
+              <div style={{fontSize:8,color:'var(--muted)',letterSpacing:1,marginBottom:4}}>{l}</div>
+              <div className="mono" style={{fontSize:12,fontWeight:800,color:c}}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Phase 1 */}
+        <div className="card" style={{borderColor:'#10b98133',marginBottom:10}}>
+          <div className="row" style={{marginBottom:8}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Phase 1 — Assignments</div>
+            <span className="chip" style={{background:'#10b98122',color:'var(--success)'}}>✅ CLEARED</span>
+          </div>
+          <div style={{fontSize:11,color:'var(--sub)',marginBottom:8}}>EV#4–18 • Agreed: £730 • Paid: £{p1Total}</div>
+          {p1.map((p,i)=>(
+            <div key={i} className="row" style={{padding:'4px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{fontSize:10,color:'var(--muted)'}}>{p.date}</span>
+              <span className="mono" style={{fontSize:10,fontWeight:700,color:'var(--success)'}}>£{p.amount}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Phase 2 */}
+        <div className="card" style={{borderColor:'#f59e0b33'}}>
+          <div className="row" style={{marginBottom:8}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Phase 2 — Course Units</div>
+            <span className="chip" style={{background:'#f59e0b22',color:'var(--warning)'}}>🔴 ONGOING</span>
+          </div>
+          <div style={{fontSize:11,color:'var(--sub)',marginBottom:8}}>Units 9–19 • Agreed: £1,260 • Paid: £{p2Total} • Owed: £{p2Outstanding}</div>
+          <div className="progress-bar" style={{height:8,marginBottom:8}}>
+            <div className="progress-fill" style={{width:`${(p2Total/p2Agreed)*100}%`,background:'var(--warning)'}}/>
+          </div>
+          <div style={{fontSize:9,color:'var(--muted)',marginBottom:12}}>{((p2Total/p2Agreed)*100).toFixed(1)}% paid (£{p2Total} of £{p2Agreed})</div>
+          {p2.map((p,i)=>(
+            <div key={i} className="row" style={{padding:'4px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{fontSize:10,color:'var(--muted)'}}>{p.date}</span>
+              <span className="mono" style={{fontSize:10,fontWeight:700,color:'var(--warning)'}}>£{p.amount}</span>
+            </div>
+          ))}
+          <div style={{marginTop:10,padding:'8px',background:'#1a1000',borderRadius:8}}>
+            <div style={{fontSize:10,color:'var(--warning)',fontWeight:700}}>Settlement options:</div>
+            <div style={{fontSize:10,color:'var(--sub)',marginTop:4}}>Agreed rate: £{p2Outstanding} (~{fmt(p2Outstanding*4730)})</div>
+            <div style={{fontSize:10,color:'var(--sub)'}}>Favour rate: £{1050-p2Total>0?1050-p2Total:0} (~{fmt(Math.max(0,1050-p2Total)*4730)})</div>
+          </div>
+        </div>
+      </div>
+      <div style={{height:20}}/>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
+function App(){
+  const [tab,setTab]=useState('dashboard');
+  const [data,setData]=useState(loadData);
+  const [toast,setToast]=useState(null);
+  const toastTimer=useRef(null);
+
+  useEffect(()=>{saveData(data);},[data]);
+
+  function showToast(msg){
+    setToast(msg);clearTimeout(toastTimer.current);
+    toastTimer.current=setTimeout(()=>setToast(null),2000);
+  }
+
+  function handleUpdate(action,payload){
+    setData(prev=>{
+      const next=JSON.parse(JSON.stringify(prev));
+      if(action==='addTransaction')next.transactions=[payload,...next.transactions];
+      else if(action==='addLoan')next.loans=[...next.loans,payload];
+      else if(action==='payLoan'){
+        const loan=next.loans.find(l=>l.id===payload.id);
+        if(loan){loan.paid=(loan.paid||0)+payload.amount;if(loan.paid>=loan.principal)loan.status='cleared';}
+      }
+      return next;
+    });
+  }
+
+  const now=new Date();
+  const timeStr=now.toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit',hour12:false});
+
+  return(
+    <div className="app">
+      {toast&&<div className="toast">✓ {toast}</div>}
+      <div className="status-bar">
+        <span className="status-time">{timeStr}</span>
+        <div className="notch"/>
+        <div style={{display:'flex',gap:6,alignItems:'center',fontSize:11,color:'var(--text)'}}>
+          <span>●●●</span><span>WiFi</span><span>🔋</span>
+        </div>
+      </div>
+      <div className="app-header">
+        <div className="app-title">FinanceMonitor UG</div>
+        <div className="app-sub">SMS Auto-Detection • Real-time Tracking • Apr 2026</div>
+        <div className="source-badges">
+          {[['MTN','#FFCC00'],['Airtel','#FF0000'],['DFCU','#00843D'],['KCB','#007A3D'],['NCBA','#E87722'],['Pearl','#4B0082'],['HFB','#8B0000'],['SACCO','#6B21A8']].map(([n,c])=>(
+            <span key={n} className="sbadge" style={{background:c+'22',color:c}}>{n}</span>
+          ))}
+        </div>
+      </div>
+      {tab==='dashboard'&&<Dashboard data={data}/>}
+      {tab==='transactions'&&<Transactions data={data}/>}
+      {tab==='scanner'&&<Scanner onAdd={tx=>handleUpdate('addTransaction',tx)} showToast={showToast}/>}
+      {tab==='loans'&&<Loans data={data} onUpdate={handleUpdate}/>}
+      {tab==='roy'&&<RoyTracker data={data}/>}
+      <div className="tab-bar">
+        {TABS.map(t=>(
+          <button key={t.id} className="tab" onClick={()=>setTab(t.id)}>
+            <span className="tab-icon">{t.icon}</span>
+            <span className="tab-label" style={{color:tab===t.id?'var(--primary)':'var(--muted)',borderBottom:tab===t.id?'2px solid var(--primary)':'2px solid transparent'}}>{t.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
