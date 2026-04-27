@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "FinanceMonitor UG",
-    "slug": "finance-monitor",
+    "name": "Kika",
+    "slug": "kika",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "finance-monitor",
+    "scheme": "kika",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -14,9 +14,12 @@
       "backgroundColor": "#0A0E1A"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kika.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.kika.app"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
