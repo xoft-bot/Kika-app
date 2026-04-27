@@ -227,6 +227,9 @@ importers:
       expo-updates:
         specifier: ~29.0.16
         version: 29.0.16(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react-native-android-sms-listener:
+        specifier: 2.1.0
+        version: 2.1.0
     devDependencies:
       '@babel/core':
         specifier: ^7.25.2
@@ -4773,6 +4776,9 @@ packages:
 
   react-is@19.2.5:
     resolution: {integrity: sha512-Dn0t8IQhCmeIT3wu+Apm1/YVsJXsGWi6k4sPdnBIdqMVtHtv0IGi6dcpNpNkNac0zB2uUAqNX3MHzN8c+z2rwQ==}
+
+  react-native-android-sms-listener@2.1.0:
+    resolution: {integrity: sha512-DzzcVFtOiAnJD8q6Cc5/2P6WswVncoizLAMkHtMEXK+8Tp8xXAgQDzV++Yiot7SoL9www9DpCTcu2+ftJcUk5A==}
 
   react-native-gesture-handler@2.28.0:
     resolution: {integrity: sha512-0msfJ1vRxXKVgTgvL+1ZOoYw3/0z1R+Ked0+udoJhyplC2jbVKIJ8Z1bzWdpQRCV3QcQ87Op0zJVE5DhKK2A0A==}
@@ -10833,6 +10839,8 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.5: {}
+
+  react-native-android-sms-listener@2.1.0: {}
 
   react-native-gesture-handler@2.28.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:

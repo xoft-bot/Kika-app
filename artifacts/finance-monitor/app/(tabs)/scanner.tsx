@@ -14,6 +14,7 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SmsAutoImportCard } from "@/components/SmsAutoImportCard";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
@@ -51,13 +52,6 @@ export default function ScannerScreen() {
   const [parsed, setParsed] = useState<ParsedSms | null>(null);
 
   useEffect(() => {}, []);
-
-  const requestSmsPermission = async () => {
-    Alert.alert(
-      "SMS access",
-      "Background SMS listening requires Android SMS permission in a custom build. Expo Go cannot do silent SMS reading.",
-    );
-  };
 
   const handleParse = (text?: string) => {
     const input = text ?? sms;
@@ -99,14 +93,7 @@ export default function ScannerScreen() {
     <View style={[styles.container, { backgroundColor: c.bg }]}> 
       <Header
         title="SMS Scanner"
-        subtitle="Paste or enable background SMS import"
-        rightIcon="info"
-        onPressRight={() =>
-          Alert.alert(
-            "Background SMS",
-            "Android can listen in the background with SMS permission in a custom build. Expo Go cannot do silent SMS reading.",
-          )
-        }
+        subtitle="Paste or auto-import on Android"
       />
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
@@ -119,28 +106,7 @@ export default function ScannerScreen() {
           }}
           showsVerticalScrollIndicator={false}
         >
-          <Card borderColor={c.primary + "55"} elevated>
-            <View style={styles.permRow}>
-              <View style={styles.permTitleRow}>
-                <Feather name="shield" size={18} color={c.primary} />
-                <Text style={[styles.permTitle, { color: c.text }]}>SMS permission</Text>
-              </View>
-              <Badge label="ANDROID ONLY" color={c.warn} />
-            </View>
-            <Text style={[styles.permBody, { color: c.textMuted }]}> 
-              For silent background SMS listening, Android permissions are required in a custom build.
-              Expo Go can still paste and import messages manually.
-            </Text>
-            <Pressable
-              onPress={requestSmsPermission}
-              style={({ pressed }) => [
-                styles.permBtn,
-                { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Text style={[styles.permBtnText, { color: c.bg }]}>Enable SMS access</Text>
-            </Pressable>
-          </Card>
+          <SmsAutoImportCard />
 
           <Card>
             <View style={styles.smsHead}>

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PinDots } from "@/components/PinDots";
 import { PinKeypad } from "@/components/PinKeypad";
+import { SmsAutoImportCard } from "@/components/SmsAutoImportCard";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
@@ -299,6 +300,9 @@ export default function SettingsScreen() {
             Your PIN is hashed and stored in the device's secure hardware
             (Android Keystore / iOS Keychain). It never leaves this device.
           </Text>
+
+          <Text style={[styles.section, { color: c.textMuted }]}>SMS</Text>
+          <SmsAutoImportCard showRecent={false} />
         </ScrollView>
       ) : (
         <View style={[styles.pinScreen, { paddingBottom: insets.bottom + 16 }]}>

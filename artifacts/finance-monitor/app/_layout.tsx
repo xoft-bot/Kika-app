@@ -18,6 +18,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { FinanceProvider } from "@/context/FinanceContext";
+import { SmsAutoImportProvider } from "@/context/SmsAutoImportContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -59,10 +60,12 @@ export default function RootLayout() {
             <KeyboardProvider>
               <AuthProvider>
                 <FinanceProvider>
-                  <StatusBar style="light" />
-                  <AuthGate>
-                    <RootLayoutNav />
-                  </AuthGate>
+                  <SmsAutoImportProvider>
+                    <StatusBar style="light" />
+                    <AuthGate>
+                      <RootLayoutNav />
+                    </AuthGate>
+                  </SmsAutoImportProvider>
                 </FinanceProvider>
               </AuthProvider>
             </KeyboardProvider>

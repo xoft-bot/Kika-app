@@ -95,11 +95,25 @@ The `preview` profile in `eas.json` is set to `buildType: "apk"` so you get an i
 - **Category:** rule-based regex (Salary/Loan/Utilities/Transport/Food/etc).
 - **Confidence:** high if 4 of 4 dimensions resolve, medium if ≥2, else low.
 
-## Background SMS Reading (Android)
+## Auto-import SMS (Android)
 
-Silent auto-reading of incoming SMS requires Android-only `READ_SMS`/`RECEIVE_SMS` permissions and a custom native module. The parser is platform-agnostic — when the app is built as a native Android dev client, it can be plugged into a native SMS BroadcastReceiver and `addTransactionFromParsed()` called per incoming message. iOS does not allow this.
+Live foreground SMS auto-import is wired up via `react-native-android-sms-listener`:
 
-For now, paste-to-import via the Scanner tab works on every platform.
+- **Permissions:** `RECEIVE_SMS` + `READ_SMS` declared in `app.json` under `android.permissions`.
+- **Hook:** `hooks/useSmsAutoImport.ts` requests permission via `PermissionsAndroid`, attaches a listener while `enabled && permission === "granted"`, and routes incoming messages through `lib/smsAutoImport.ts → tryImport()`.
+- **Provider:** `context/SmsAutoImportContext.tsx` exposes the hook to both the Settings screen and the Scanner tab so they share one listener instance.
+- **UI:** `components/SmsAutoImportCard.tsx` — toggle, status dot (off / listening / blocked / unsupported), and the last 4 import attempts. Lives at the top of Scanner and inside Settings.
+- **Dedup:** message bodies are fingerprinted (cheap hash) and the last 200 fingerprints are kept in AsyncStorage under `kika.sms.recent.v1`.
+- **Confidence gate:** only `medium`/`high` confidence parses are imported automatically; `low` are skipped and shown as such.
+- **Settings:** persisted in AsyncStorage under `kika.sms.autoimport.v1`. Off by default.
+
+### Limitations
+
+- **Expo Go:** SMS listening doesn't work in Expo Go — needs a custom dev build or installed APK because the native module isn't bundled in Expo Go.
+- **Foreground only:** the listener is alive while the app is open. Silent processing when the app is fully closed would need a static manifest-registered BroadcastReceiver (not yet built).
+- **iOS:** Apple does not allow SMS reading. Card shows "ANDROID ONLY".
+
+Manual paste-to-import via the Scanner tab continues to work on every platform.
 
 ## Seed Data Preserved
 

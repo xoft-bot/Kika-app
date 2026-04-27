@@ -18,7 +18,11 @@
       "bundleIdentifier": "com.kika.app"
     },
     "android": {
-      "package": "com.kika.app"
+      "package": "com.kika.app",
+      "permissions": [
+        "android.permission.RECEIVE_SMS",
+        "android.permission.READ_SMS"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
