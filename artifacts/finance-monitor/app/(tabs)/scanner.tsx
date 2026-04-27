@@ -1,7 +1,5 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -51,28 +49,13 @@ export default function ScannerScreen() {
 
   const [sms, setSms] = useState("");
   const [parsed, setParsed] = useState<ParsedSms | null>(null);
-  const [smsAccess, setSmsAccess] = useState<"unknown" | "granted" | "denied">("unknown");
 
-  useEffect(() => {
-    if (Platform.OS === "android") {
-      Notifications.getPermissionsAsync().then((perm) => {
-        setSmsAccess(perm.granted ? "granted" : "denied");
-      }).catch(() => {});
-    }
-  }, []);
+  useEffect(() => {}, []);
 
   const requestSmsPermission = async () => {
-    if (Platform.OS !== "android") {
-      Alert.alert("Android only", "Background SMS access only works on Android custom builds.");
-      return;
-    }
-    if (!Device.isDevice) {
-      Alert.alert("Need a real phone", "Expo Go on emulator/web cannot read SMS in the background.");
-      return;
-    }
     Alert.alert(
       "SMS access",
-      "To enable background SMS listening, the app will need Android SMS permissions in a custom build. Expo Go cannot grant this.",
+      "Background SMS listening requires Android SMS permission in a custom build. Expo Go cannot do silent SMS reading.",
     );
   };
 
@@ -142,10 +125,7 @@ export default function ScannerScreen() {
                 <Feather name="shield" size={18} color={c.primary} />
                 <Text style={[styles.permTitle, { color: c.text }]}>SMS permission</Text>
               </View>
-              <Badge
-                label={smsAccess === "granted" ? "READY" : smsAccess === "denied" ? "NOT ENABLED" : "UNKNOWN"}
-                color={smsAccess === "granted" ? c.primary : c.warn}
-              />
+              <Badge label="ANDROID ONLY" color={c.warn} />
             </View>
             <Text style={[styles.permBody, { color: c.textMuted }]}> 
               For silent background SMS listening, Android permissions are required in a custom build.

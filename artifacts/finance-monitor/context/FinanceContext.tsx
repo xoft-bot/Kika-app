@@ -9,7 +9,7 @@ import React, {
   type ReactNode,
 } from "react";
 
-import { genId } from "@/lib/format";
+import { genId, monthKey } from "@/lib/format";
 import {
   GBP_TO_UGX,
   ROY_PHASE1_AGREED,
@@ -64,6 +64,15 @@ type FinanceContextValue = FinanceState & FinanceActions & {
     royPhase1Outstanding: number;
     royPhase2Outstanding: number;
   };
+  reports: {
+    monthCount: number;
+    incomeMonth: number;
+    expenseMonth: number;
+    netMonth: number;
+    topCategory: string;
+    moneyInCount: number;
+    moneyOutCount: number;
+  };
 };
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
@@ -94,7 +103,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PersistedState>(seedState);
   const [ready, setReady] = useState(false);
 
-  // Hydrate from storage on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -105,7 +113,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           setState({ ...seedState, ...parsed });
         }
       } catch {
-        // Ignore — fall back to seed
       } finally {
         if (mounted) setReady(true);
       }
@@ -115,7 +122,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist on changes (after hydration)
   useEffect(() => {
     if (!ready) return;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
@@ -125,7 +131,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       const newTxn: Transaction = { id: genId(), ...t };
       const next = { ...s, transactions: [newTxn, ...s.transactions] };
-      // Auto-update account balance
       next.accounts = s.accounts.map((a) =>
         a.key === t.account
           ? { ...a, balance: a.balance + (t.type === "in" ? t.amount : -t.amount) }
@@ -153,7 +158,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       const accounts = s.accounts.map((a) => {
         if (a.key !== txn.account) return a;
-        // If the SMS reported a balance, trust it; otherwise apply delta
         if (typeof p.balance === "number" && p.balance > 0) {
           return { ...a, balance: p.balance };
         }
@@ -228,12 +232,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       (sum, r) => sum + Math.max(0, r.total - r.paid),
       0,
     );
-
     const royPhase1Paid = state.royPayments.filter((p) => p.phase === 1).reduce((s, p) => s + p.gbp, 0);
     const royPhase2Paid = state.royPayments.filter((p) => p.phase === 2).reduce((s, p) => s + p.gbp, 0);
     const royPhase1Outstanding = Math.max(0, ROY_PHASE1_AGREED - royPhase1Paid);
     const royPhase2Outstanding = Math.max(0, ROY_PHASE2_AGREED - royPhase2Paid);
-
     return {
       cashTotal,
       debtTotal,
@@ -246,11 +248,42 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     };
   }, [state]);
 
+  const reports = useMemo(() => {
+    const currentMonth = monthKey(new Date().toISOString());
+    let incomeMonth = 0;
+    let expenseMonth = 0;
+    let moneyInCount = 0;
+    let moneyOutCount = 0;
+    const categoryTotals = new Map<string, number>();
+    for (const t of state.transactions) {
+      if (monthKey(t.date) !== currentMonth) continue;
+      if (t.type === "in") {
+        incomeMonth += t.amount;
+        moneyInCount += 1;
+      } else {
+        expenseMonth += t.amount;
+        moneyOutCount += 1;
+      }
+      categoryTotals.set(t.category, (categoryTotals.get(t.category) ?? 0) + t.amount);
+    }
+    const topCategory = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "None";
+    return {
+      monthCount: state.transactions.filter((t) => monthKey(t.date) === currentMonth).length,
+      incomeMonth,
+      expenseMonth,
+      netMonth: incomeMonth - expenseMonth,
+      topCategory,
+      moneyInCount,
+      moneyOutCount,
+    };
+  }, [state.transactions]);
+
   const value = useMemo<FinanceContextValue>(
     () => ({
       ready,
       ...state,
       totals,
+      reports,
       addTransaction,
       addTransactionFromParsed,
       deleteTransaction,
@@ -260,19 +293,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setGbpRate,
       resetToSeed,
     }),
-    [
-      ready,
-      state,
-      totals,
-      addTransaction,
-      addTransactionFromParsed,
-      deleteTransaction,
-      updateAccountBalance,
-      recordLoanPayment,
-      addLoan,
-      setGbpRate,
-      resetToSeed,
-    ],
+    [ready, state, totals, reports, addTransaction, addTransactionFromParsed, deleteTransaction, updateAccountBalance, recordLoanPayment, addLoan, setGbpRate, resetToSeed],
   );
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
