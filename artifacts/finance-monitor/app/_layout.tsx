@@ -14,7 +14,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AuthGate } from "@/components/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthProvider } from "@/context/AuthContext";
 import { FinanceProvider } from "@/context/FinanceContext";
 
 SplashScreen.preventAutoHideAsync();
@@ -51,10 +53,14 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0A0E1A" }}>
             <KeyboardProvider>
-              <FinanceProvider>
-                <StatusBar style="light" />
-                <RootLayoutNav />
-              </FinanceProvider>
+              <AuthProvider>
+                <FinanceProvider>
+                  <StatusBar style="light" />
+                  <AuthGate>
+                    <RootLayoutNav />
+                  </AuthGate>
+                </FinanceProvider>
+              </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

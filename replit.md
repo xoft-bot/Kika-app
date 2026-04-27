@@ -14,7 +14,7 @@ Personal finance monitoring mobile app for Uganda. Tracks balances on MTN MoMo, 
 ```
 artifacts/finance-monitor/
   app/
-    _layout.tsx              # Root layout — providers wrapped, fonts gated
+    _layout.tsx              # Root layout — providers wrapped, fonts gated, AuthGate wraps RootLayoutNav
     (tabs)/
       _layout.tsx            # 5 tabs: Overview, Activity, Scanner, Loans, Roy
       index.tsx              # Dashboard — net position, balances, monthly flow, receivables
@@ -25,10 +25,14 @@ artifacts/finance-monitor/
   components/
     AccountIcon.tsx          # MTN/Airtel/bank circular badges
     AddTransactionSheet.tsx  # Bottom sheet — manual entry
+    AuthGate.tsx             # Renders Setup/Lock/Loading screens until unlocked
     CategoryIcon.tsx         # Per-category icon mapping
+    PinDots.tsx              # 4-dot PIN indicator
+    PinKeypad.tsx            # 0-9 + biometric + backspace keypad
     TransactionRow.tsx       # Row used in lists
     ui/                      # Card, Badge, ProgressBar, SectionLabel, Header
   context/
+    AuthContext.tsx          # PIN setup, lock/unlock, biometric, auto-lock on background
     FinanceContext.tsx       # All state + actions + computed totals
   lib/
     types.ts                 # Transaction, Loan, Receivable, RoyPayment, ParsedSms
@@ -38,7 +42,46 @@ artifacts/finance-monitor/
   constants/colors.ts        # Dark fintech theme (#0A0E1A bg, #00C896 primary)
   hooks/useColors.ts         # Theme hook
   assets/images/icon.png     # AI-generated app icon
+  eas.json                   # EAS Build profiles — preview profile produces APK
 ```
+
+## Authentication
+
+Local device-only auth (no server, no account):
+
+- **PIN:** 4-digit, hashed with SHA-256 + per-device random salt, stored in `expo-secure-store` (Android Keystore / iOS Keychain).
+- **Biometric:** optional fingerprint/face/iris via `expo-local-authentication` — preference stored in SecureStore.
+- **Auto-lock:** app re-locks if backgrounded for >60s.
+- **Reset:** after 5 wrong attempts, a "Forgot PIN" link appears that clears the PIN (finance data on device is preserved — AsyncStorage is separate from SecureStore).
+- **Provider order:** `AuthProvider` wraps `FinanceProvider`; `AuthGate` renders Setup/Lock/Loading until `status === "unlocked"`, then mounts the tabs.
+
+## Building an APK (sideload to your phone)
+
+The app is configured for EAS Build. Two paths:
+
+### Option A — Cloud build (easiest, recommended)
+1. Create a free Expo account at https://expo.dev/signup.
+2. From your local machine (or this Repl shell):
+   ```
+   cd artifacts/finance-monitor
+   npx eas-cli@latest login
+   npx eas-cli@latest init           # links the project to your Expo account, writes projectId
+   npx eas-cli@latest build -p android --profile preview
+   ```
+3. EAS uploads, builds in the cloud, and gives you a URL to download the APK. Open that URL on your Android phone (allow "Install unknown apps" for your browser) and install.
+
+### Option B — Local build (no Expo account required)
+Requires Android Studio + JDK 17 + Android SDK on your local machine (won't work inside Replit).
+```
+cd artifacts/finance-monitor
+npx expo prebuild --platform android --clean
+cd android
+./gradlew assembleRelease
+# APK appears at android/app/build/outputs/apk/release/app-release.apk
+```
+For a signed release APK you'll need to generate a keystore — `npx expo run:android --variant release` walks you through it.
+
+The `preview` profile in `eas.json` is set to `buildType: "apk"` so you get an installable APK (not an AAB bundle). Bundle id is `com.kika.app`.
 
 ## SMS Parser
 
