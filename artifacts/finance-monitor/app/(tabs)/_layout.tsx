@@ -13,23 +13,19 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>Overview</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="transactions">
-        <Icon sf={{ default: "list.bullet", selected: "list.bullet" }} />
-        <Label>Activity</Label>
+        <Label>Dashboard</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scanner">
         <Icon sf={{ default: "doc.text.viewfinder", selected: "doc.text.viewfinder" }} />
-        <Label>Scanner</Label>
+        <Label>SMS</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="loans">
         <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
         <Label>Loans</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="roy">
-        <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
-        <Label>Roy</Label>
+      <NativeTabs.Trigger name="transactions">
+        <Icon sf={{ default: "list.bullet", selected: "list.bullet" }} />
+        <Label>History</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -70,33 +66,21 @@ function ClassicTabLayout() {
               style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.bgElevated },
-              ]}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />
           ) : null,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Overview",
-          tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={20} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="transactions"
-        options={{
-          title: "Activity",
-          tabBarIcon: ({ color }) => <Feather name="list" size={20} color={color} />,
+          title: "Dashboard",
+          tabBarIcon: ({ color }) => <Feather name="grid" size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="scanner"
         options={{
-          title: "Scanner",
+          title: "SMS",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="message-text-outline" size={22} color={color} />
           ),
@@ -110,10 +94,10 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="roy"
+        name="transactions"
         options={{
-          title: "Roy",
-          tabBarIcon: ({ color }) => <Feather name="user" size={20} color={color} />,
+          title: "History",
+          tabBarIcon: ({ color }) => <Feather name="list" size={20} color={color} />,
         }}
       />
     </Tabs>
@@ -121,8 +105,6 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }
