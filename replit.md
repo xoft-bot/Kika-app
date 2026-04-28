@@ -113,6 +113,16 @@ Live foreground SMS auto-import is wired up via `react-native-android-sms-listen
 - **Foreground only:** the listener is alive while the app is open. Silent processing when the app is fully closed would need a static manifest-registered BroadcastReceiver (not yet built).
 - **iOS:** Apple does not allow SMS reading. Card shows "ANDROID ONLY".
 
+### Inbox backfill scan
+
+Powered by `react-native-get-sms-android`. Lazy-loaded the same way as the listener so iOS/web never resolves it.
+
+- **API:** `scanInbox(daysBack, settings, addFn)` in `lib/smsAutoImport.ts` returns `{ total, imported, duplicates, lowConfidence, attempts }`.
+- **UI:** "Scan inbox" button on the auto-import card → expands a 7/30/90 day picker. After a scan finishes, an alert summarises the result and the recent imports list updates.
+- **Dedup:** uses the same `markSeen` fingerprint store as the live listener, so re-scanning never doubles up transactions. Running the listener and then a backfill is safe.
+- **Confidence:** same gate as the live import. Low-confidence messages are skipped (and remembered so the next scan doesn't re-process them).
+- **Cap:** `maxCount: 500` per scan to keep memory bounded.
+
 Manual paste-to-import via the Scanner tab continues to work on every platform.
 
 ## Seed Data Preserved

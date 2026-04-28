@@ -4,11 +4,14 @@ import { PermissionsAndroid, Platform } from "react-native";
 import { useFinance } from "@/context/FinanceContext";
 import {
   DEFAULT_SETTINGS,
+  isHistoryScanSupported,
   loadSettings,
   saveSettings,
+  scanInbox,
   SUPPORTED,
   tryImport,
   type ImportAttempt,
+  type ScanInboxResult,
   type SmsAutoImportSettings,
 } from "@/lib/smsAutoImport";
 
@@ -48,10 +51,14 @@ export interface UseSmsAutoImportApi {
   settings: SmsAutoImportSettings;
   permission: PermissionState;
   lastImports: ImportAttempt[];
+  scanning: boolean;
+  lastScan: ScanInboxResult | null;
+  historyScanSupported: boolean;
   setEnabled: (next: boolean) => Promise<boolean>;
   setMinConfidence: (c: "high" | "medium") => Promise<void>;
   requestPermission: () => Promise<PermissionState>;
   clearLastImports: () => void;
+  scanHistory: (daysBack: number) => Promise<ScanInboxResult | null>;
 }
 
 const RECENT_BUFFER = 8;
@@ -65,6 +72,8 @@ export function useSmsAutoImport(): UseSmsAutoImportApi {
     SUPPORTED ? "unknown" : "unsupported",
   );
   const [lastImports, setLastImports] = useState<ImportAttempt[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [lastScan, setLastScan] = useState<ScanInboxResult | null>(null);
   const subRef = useRef<{ remove: () => void } | null>(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -197,14 +206,50 @@ export function useSmsAutoImport(): UseSmsAutoImportApi {
 
   const clearLastImports = useCallback(() => setLastImports([]), []);
 
+  const scanHistory = useCallback(
+    async (daysBack: number): Promise<ScanInboxResult | null> => {
+      if (Platform.OS !== "android") return null;
+      let perm = permission;
+      if (perm !== "granted") perm = await requestPermission();
+      if (perm !== "granted") return null;
+      if (!isHistoryScanSupported()) return null;
+
+      setScanning(true);
+      try {
+        const result = await scanInbox(
+          daysBack,
+          settingsRef.current,
+          addTransactionFromParsed,
+        );
+        setLastScan(result);
+        if (result.attempts.length) {
+          setLastImports((prev) =>
+            [...result.attempts.filter((a) => a.reason !== "duplicate"), ...prev].slice(
+              0,
+              RECENT_BUFFER,
+            ),
+          );
+        }
+        return result;
+      } finally {
+        setScanning(false);
+      }
+    },
+    [permission, requestPermission, addTransactionFromParsed],
+  );
+
   return {
     supported: SUPPORTED,
     settings,
     permission,
     lastImports,
+    scanning,
+    lastScan,
+    historyScanSupported: isHistoryScanSupported(),
     setEnabled,
     setMinConfidence,
     requestPermission,
     clearLastImports,
+    scanHistory,
   };
 }

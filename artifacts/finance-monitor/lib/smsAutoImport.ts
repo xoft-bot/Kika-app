@@ -106,3 +106,114 @@ export async function tryImport(
 }
 
 export const SUPPORTED = Platform.OS === "android";
+
+// ---------- SMS history scan (one-shot) ----------
+
+export interface ScanInboxResult {
+  total: number;
+  imported: number;
+  duplicates: number;
+  lowConfidence: number;
+  attempts: ImportAttempt[];
+}
+
+interface RawSms {
+  _id?: number;
+  address?: string;
+  body?: string;
+  date?: number;
+}
+
+type SmsAndroidModule = {
+  list: (
+    filter: string,
+    fail: (err: string) => void,
+    success: (count: number, smsList: string) => void,
+  ) => void;
+};
+
+let cachedSmsAndroid: SmsAndroidModule | null | undefined;
+function getSmsAndroid(): SmsAndroidModule | null {
+  if (cachedSmsAndroid !== undefined) return cachedSmsAndroid;
+  if (!SUPPORTED) {
+    cachedSmsAndroid = null;
+    return null;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("react-native-get-sms-android");
+    cachedSmsAndroid = (mod?.default ?? mod) as SmsAndroidModule;
+  } catch {
+    cachedSmsAndroid = null;
+  }
+  return cachedSmsAndroid;
+}
+
+export function isHistoryScanSupported(): boolean {
+  return SUPPORTED && getSmsAndroid() !== null;
+}
+
+export async function scanInbox(
+  daysBack: number,
+  settings: SmsAutoImportSettings,
+  add: (p: ParsedSms) => Transaction,
+): Promise<ScanInboxResult> {
+  const mod = getSmsAndroid();
+  if (!mod) {
+    return {
+      total: 0,
+      imported: 0,
+      duplicates: 0,
+      lowConfidence: 0,
+      attempts: [],
+    };
+  }
+
+  const minDate = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+  const filter = JSON.stringify({
+    box: "inbox",
+    minDate,
+    maxCount: 500,
+  });
+
+  const messages = await new Promise<RawSms[]>((resolve) => {
+    try {
+      mod.list(
+        filter,
+        () => resolve([]),
+        (_count, smsList) => {
+          try {
+            const parsed = JSON.parse(smsList);
+            resolve(Array.isArray(parsed) ? parsed : []);
+          } catch {
+            resolve([]);
+          }
+        },
+      );
+    } catch {
+      resolve([]);
+    }
+  });
+
+  const attempts: ImportAttempt[] = [];
+  let imported = 0;
+  let duplicates = 0;
+  let lowConfidence = 0;
+
+  for (const m of messages) {
+    if (!m?.body) continue;
+    const attempt = await tryImport(m.body, settings, add);
+    attempts.push(attempt);
+    if (attempt.imported) imported += 1;
+    else if (attempt.reason === "duplicate") duplicates += 1;
+    else if (attempt.reason === "low_confidence") lowConfidence += 1;
+  }
+
+  return {
+    total: messages.length,
+    imported,
+    duplicates,
+    lowConfidence,
+    attempts,
+  };
+}
